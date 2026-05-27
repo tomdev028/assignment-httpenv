@@ -1,4 +1,4 @@
-FROM golang:1.18:alpine
+FROM golang:1.18-alpine
 COPY httpenv.go /go
 RUN go build httpenv.go
 
