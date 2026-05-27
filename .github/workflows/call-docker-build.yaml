@@ -44,6 +44,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      - name: Build and export docker in locally
+        uses: docker/build-push-action@v6
+        with:
+          push: false
+          load: true
+          tags: ${{github.run_id}}
+          target: test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Run Trivy for all CVEs 
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{github.run_id}}
+          exit-code: 0
+          format: table
+
       - name: Extract Docker metadata
         id: extract_meta_data
         uses: docker/metadata-action@v5
@@ -67,15 +85,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-
-      - name: Run OSV scanner  for all CVEs
-        uses: google/osv-scanner-action@v1
-        with:
-          scan-args: |-
-            --format=table
-            --docker
-            ${{ github.run_id }}
-          continue-on-error: true
 
       - name: Find comment for image tags
         uses: peter-evans/find-comment@v4
