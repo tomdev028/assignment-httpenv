@@ -76,7 +76,7 @@ jobs:
 
       - name: Unit Testing in Docker
         run: |
-          docker run -rm ${{github.run_id}} echo "Unit Testing in Docker"
+          docker run --rm ${{github.run_id}} echo "Unit Testing in Docker"
 
 
       - name: Extract Docker metadata
