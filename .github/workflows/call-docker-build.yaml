@@ -39,5 +39,5 @@ jobs:
       - name: Docker build
         uses: docker/build-push-action@v6
         with:
-          push: ${{github_event_name != 'pull_request'}}
+          push: ${{github.event_name != 'pull_request'}}
           tag: devtom028/go-httpenv
