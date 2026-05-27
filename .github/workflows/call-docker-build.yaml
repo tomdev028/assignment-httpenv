@@ -74,6 +74,11 @@ jobs:
           format: "sarif"
           output: 'trivy-results.sarif'
 
+      - name: Unit Testing in Docker
+        run: |
+          docker run -rm ${{github.run_id}} echo "Unit Testing in Docker"
+
+
       - name: Extract Docker metadata
         id: extract_meta_data
         uses: docker/metadata-action@v5
