@@ -68,6 +68,15 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7
 
+      - name: Run OSV scanner  for all CVEs
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: |-
+            --format=table
+            --docker
+            ${{ github.run_id }}
+          continue-on-error: true
+
       - name: Find comment for image tags
         uses: peter-evans/find-comment@v4
         if: github.event_name == 'pull_request'
