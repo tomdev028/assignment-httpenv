@@ -139,6 +139,11 @@ jobs:
             --docker-password=${{secrets.GITHUB_TOKEN}}
           export TESTING_IMAGE=ghcr.io/devtom028/httpenv-ci-automation:${{github.run_id}}
           envsubst < manifests/deployment.yaml | kubectl apply -f -
+
+          kubectl get pods
+          kubectl describe pod -l app=myapp
+          kubectl logs -l app=myapp
+
           kubectl rollout status deployment myapp --timeout=2m
           kubectl exec deploy/myapp -- curl --fail localhost:8888
 
