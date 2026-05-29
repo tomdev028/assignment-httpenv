@@ -140,7 +140,7 @@ jobs:
           export TESTING_IMAGE=ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
           envsubst < manifests/deployment.yaml | kubectl apply -f -
 
-          kubectl get pods -w
+          kubectl get pods 
           kubectl describe pod -l app=myapp
           kubectl logs -l app=myapp
 
