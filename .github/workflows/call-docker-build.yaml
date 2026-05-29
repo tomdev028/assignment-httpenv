@@ -46,12 +46,27 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and export docker in locally
+      - name: Build and export docker in locally for unit test
+        uses: docker/build-push-action@v6
+        with:
+          target: test
+          push: false
+          load: true
+          tags: ${{github.run_id}}-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Unit Testing in Docker
+        run: |
+          docker run --rm ${{github.run_id}}-test
+
+      - name: Build and export docker in locally for finally
         uses: docker/build-push-action@v6
         with:
           push: false
           load: true
-          tags: ${{github.run_id}}
+          tags: ${{github.run_id}}-final
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
@@ -59,25 +74,20 @@ jobs:
       - name: Run Trivy for all CVEs 
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{github.run_id}}
+          image-ref: ${{github.run_id}}-final
           exit-code: 0
           format: table
 
-      - name: Run Trivy for HIGH, CRITICAL CVEs and report(blocking)
+      - name: Run Trivy for HIGH,CRITICAL CVEs and report(blocking)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{github.run_id}}
+          image-ref: ${{github.run_id}}-final
           exit-code: 1
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'HIGH, CRITICAL'
           format: "sarif"
           output: 'trivy-results.sarif'
-
-      - name: Unit Testing in Docker
-        run: |
-          docker run --rm ${{github.run_id}} echo "Unit Testing in Docker"
-
 
       - name: Extract Docker metadata
         id: extract_meta_data
