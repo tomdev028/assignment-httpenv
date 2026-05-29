@@ -122,7 +122,7 @@ jobs:
           platforms: linux/amd64
 
       - name: Create k3d kubernetes cluster
-        uses: AbsaOSS/k3d-action@v3.4.0
+        uses: AbsaOSS/k3d-action@v2.4.0
         with:
           cluster-name: "test-cluster-1"
           args: >-
