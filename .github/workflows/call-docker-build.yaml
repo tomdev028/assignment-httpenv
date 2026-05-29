@@ -52,14 +52,30 @@ jobs:
           target: test
           push: false
           load: true
-          tags: ${{github.run_id}}-test
+          tags: ${{github.run_id}}-unit-test
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
       - name: Unit Testing in Docker
         run: |
-          docker run --rm ${{github.run_id}}-test
+          docker run --rm ${{github.run_id}}-unit-test
+
+
+      - name: Build and export docker in locally for integration test
+        uses: docker/build-push-action@v6
+        with:
+          push: false
+          load: true
+          tags: ${{github.run_id}}-integration-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Integration testing in Docker
+        run: |
+          export TESTING_IMAGE="${{github.run_id}}-integration-test"
+          docker compose -f docker-compose.test.yml up --exit-code-from sut
 
       - name: Build and export docker in locally for finally
         uses: docker/build-push-action@v6

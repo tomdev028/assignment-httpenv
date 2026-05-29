@@ -1,0 +1,16 @@
+services:
+  allhands22:
+    image: "${TESTING_IMAGE}"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8888"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+  sut:
+    image: curlimages/curl
+    depends_on:
+      allhands22:
+        condition: service_started
+
+    command: ["curl", "--fail", "http://allhands22:8888"]
