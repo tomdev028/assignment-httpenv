@@ -60,7 +60,7 @@ jobs:
       - name: Unit Testing in Docker
         run: |
           docker run --rm ${{github.run_id}}-unit-test
-
+          echo "Unit test passed! ✅"
 
       - name: Build and export docker in locally for integration test
         uses: docker/build-push-action@v6
@@ -76,6 +76,7 @@ jobs:
         run: |
           export TESTING_IMAGE="${{github.run_id}}-integration-test"
           docker compose -f docker-compose.test.yml up --exit-code-from sut
+          echo "Integration Test Passed! ✅"
 
       - name: Build and export docker in locally for finally
         uses: docker/build-push-action@v6
