@@ -144,3 +144,4 @@ jobs:
           kubectl describe pod -l app=myapp
           kubectl logs -l app=myapp
           kubectl exec deploy/myapp -- curl --fail localhost:8888
+          echo "Testing in k8s passed! ✅"
