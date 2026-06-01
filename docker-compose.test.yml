@@ -11,6 +11,6 @@ services:
     image: curlimages/curl
     depends_on:
       allhands22:
-        condition: service_started
+        condition: service_healthy
 
     command: ["curl", "--fail", "http://allhands22:8888"]
