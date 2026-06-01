@@ -67,14 +67,16 @@ jobs:
 
       - name: Unit Testing in Docker
         run: |
-          docker run --rm -d --name app -p 8888:8888 \
-           ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
 
-          sleep 2
+          docker run --rm ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}} go test -v ./...
+         # docker run --rm -d --name app -p 8888:8888 \
+         #  ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
 
-          curl -f localhost:8888 || exit 1
+       #   sleep 2
 
-          docker stop app
+        #  curl -f localhost:8888 || exit 1
+
+         # docker stop app
 
           echo "Unit test passed! ✅"
 
