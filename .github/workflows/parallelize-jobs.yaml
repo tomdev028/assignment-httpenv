@@ -58,22 +58,23 @@ jobs:
       packages: read
 
     steps:
-      - name: Login to ghcr.io registry
-        uses: docker/login-action@v3
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build and export docker in locally for unit test
+        uses: docker/build-push-action@v6
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          target: test
+          push: false
+          load: true
+          tags: ${{github.run_id}}-unit-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
 
       - name: Unit Testing in Docker
         run: |
-          docker run --rm ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}} go test -v ./...
-          # docker run --rm -d --name app -p 8888:8888 \
-          # ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
-          # sleep 2
-          # curl -f localhost:8888 || exit 1
-          # docker stop app
-
+          docker run --rm ${{github.run_id}}-unit-test
           echo "Unit test passed! ✅"
 
   # NEXT JOB ############
