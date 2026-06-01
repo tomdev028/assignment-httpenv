@@ -1,197 +1,197 @@
----
-# template source: https://github.com/bretfisher/docker-build-workflow/blob/main/templates/call-docker-build.yaml
-name: Docker Build
+# ---
+# # template source: https://github.com/bretfisher/docker-build-workflow/blob/main/templates/call-docker-build.yaml
+# name: Docker Build
 
-on:
-  push:
-    branches:
-      - main
-    # don't rebuild image if someone only edited unrelated files
-    paths-ignore:
-      - "README.md"
-      - ".github/linters/**"
-  pull_request:
-    # don't rebuild image if someone only edited unrelated files
-    paths-ignore:
-      - "README.md"
-      - ".github/linters/**"
-  schedule:
-    # re-run montly to keep image fresh with upstream base images
-    - cron: "0 12 15 * *"
-  workflow_dispatch:
-    # run manually from Actions tab
+# on:
+#   push:
+#     branches:
+#       - main
+#     # don't rebuild image if someone only edited unrelated files
+#     paths-ignore:
+#       - "README.md"
+#       - ".github/linters/**"
+#   pull_request:
+#     # don't rebuild image if someone only edited unrelated files
+#     paths-ignore:
+#       - "README.md"
+#       - ".github/linters/**"
+#   schedule:
+#     # re-run montly to keep image fresh with upstream base images
+#     - cron: "0 12 15 * *"
+#   workflow_dispatch:
+#     # run manually from Actions tab
 
-jobs:
-  build-image:
-    name: Build Image
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: read
-      security-events: write
-      packages: write
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+# jobs:
+#   build-image:
+#     name: Build Image
+#     runs-on: ubuntu-latest
+#     permissions:
+#       pull-requests: write
+#       contents: read
+#       security-events: write
+#       packages: write
+#     steps:
+#       - name: Check out repository
+#         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{secrets.DOCKERHUB_USERNAME}}
-          password: ${{secrets.DOCKERHUB_TOKEN}}
+#       - name: Login to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{secrets.DOCKERHUB_USERNAME}}
+#           password: ${{secrets.DOCKERHUB_TOKEN}}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+#       - name: Set up QEMU
+#         uses: docker/setup-qemu-action@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v4
 
-      - name: Build and export docker in locally for unit test
-        uses: docker/build-push-action@v6
-        with:
-          target: test
-          push: false
-          load: true
-          tags: ${{github.run_id}}-unit-test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+#       - name: Build and export docker in locally for unit test
+#         uses: docker/build-push-action@v6
+#         with:
+#           target: test
+#           push: false
+#           load: true
+#           tags: ${{github.run_id}}-unit-test
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+#           platforms: linux/amd64
 
-      - name: Unit Testing in Docker
-        run: |
-          docker run --rm ${{github.run_id}}-unit-test
-          echo "Unit test passed! ✅"
+#       - name: Unit Testing in Docker
+#         run: |
+#           docker run --rm ${{github.run_id}}-unit-test
+#           echo "Unit test passed! ✅"
 
-      - name: Build and export docker in locally for integration test
-        uses: docker/build-push-action@v6
-        with:
-          push: false
-          load: true
-          tags: ${{github.run_id}}-integration-test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+#       - name: Build and export docker in locally for integration test
+#         uses: docker/build-push-action@v6
+#         with:
+#           push: false
+#           load: true
+#           tags: ${{github.run_id}}-integration-test
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+#           platforms: linux/amd64
 
-      - name: Integration testing in Docker
-        run: |
-          export TESTING_IMAGE="${{github.run_id}}-integration-test"
-          docker compose -f docker-compose.test.yml up --exit-code-from sut
-          echo "Integration Test Passed! ✅"
+#       - name: Integration testing in Docker
+#         run: |
+#           export TESTING_IMAGE="${{github.run_id}}-integration-test"
+#           docker compose -f docker-compose.test.yml up --exit-code-from sut
+#           echo "Integration Test Passed! ✅"
 
-      - name: Build and export docker in locally for finally
-        uses: docker/build-push-action@v6
-        with:
-          push: false
-          load: true
-          tags: ${{github.run_id}}-final
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+#       - name: Build and export docker in locally for finally
+#         uses: docker/build-push-action@v6
+#         with:
+#           push: false
+#           load: true
+#           tags: ${{github.run_id}}-final
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+#           platforms: linux/amd64
 
-      - name: Run Trivy for all CVEs
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{github.run_id}}-final
-          exit-code: 0
-          format: table
+#       - name: Run Trivy for all CVEs
+#         uses: aquasecurity/trivy-action@v0.36.0
+#         with:
+#           image-ref: ${{github.run_id}}-final
+#           exit-code: 0
+#           format: table
 
-      - name: Run Trivy for HIGH,CRITICAL CVEs and report(blocking)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{github.run_id}}-final
-          exit-code: 1
-          ignore-unfixed: true
-          vuln-type: "os,library"
-          severity: "HIGH, CRITICAL"
-          format: "sarif"
-          output: "trivy-results.sarif"
+#       - name: Run Trivy for HIGH,CRITICAL CVEs and report(blocking)
+#         uses: aquasecurity/trivy-action@v0.36.0
+#         with:
+#           image-ref: ${{github.run_id}}-final
+#           exit-code: 1
+#           ignore-unfixed: true
+#           vuln-type: "os,library"
+#           severity: "HIGH, CRITICAL"
+#           format: "sarif"
+#           output: "trivy-results.sarif"
 
-      - name: Login to ghcr.io registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+#       - name: Login to ghcr.io registry
+#         uses: docker/login-action@v3
+#         with:
+#           registry: ghcr.io
+#           username: ${{ github.actor }}
+#           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push to GHCRR
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+#       - name: Build and Push to GHCRR
+#         uses: docker/build-push-action@v6
+#         with:
+#           push: true
+#           tags: ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+#           platforms: linux/amd64
 
-      - name: Create k3d kubernetes cluster
-        uses: AbsaOSS/k3d-action@v2.4.0
-        with:
-          cluster-name: "test-cluster-1"
-          args: >-
-            --agents 1
-            --no-lb
-            --k3s-arg "--no-deploy=traefik,servicelb,metrics-server@server:*"
+#       - name: Create k3d kubernetes cluster
+#         uses: AbsaOSS/k3d-action@v2.4.0
+#         with:
+#           cluster-name: "test-cluster-1"
+#           args: >-
+#             --agents 1
+#             --no-lb
+#             --k3s-arg "--no-deploy=traefik,servicelb,metrics-server@server:*"
 
-      - name: Smoke test deployment in k3d k8s
-        run: |
-          kubectl create secret docker-registry regcred \
-            --docker-server=https://ghcr.io \
-            --docker-username=${{github.actor}} \
-            --docker-password=${{secrets.GITHUB_TOKEN}}
-          export TESTING_IMAGE=ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
-          envsubst < manifests/deployment.yaml | kubectl apply -f -
-          kubectl rollout status deployment myapp --timeout=2m
-          kubectl get pods 
-          kubectl describe pod -l app=myapp
-          kubectl logs -l app=myapp
-          kubectl exec deploy/myapp -- curl --fail localhost:8888
+#       - name: Smoke test deployment in k3d k8s
+#         run: |
+#           kubectl create secret docker-registry regcred \
+#             --docker-server=https://ghcr.io \
+#             --docker-username=${{github.actor}} \
+#             --docker-password=${{secrets.GITHUB_TOKEN}}
+#           export TESTING_IMAGE=ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
+#           envsubst < manifests/deployment.yaml | kubectl apply -f -
+#           kubectl rollout status deployment myapp --timeout=2m
+#           kubectl get pods
+#           kubectl describe pod -l app=myapp
+#           kubectl logs -l app=myapp
+#           kubectl exec deploy/myapp -- curl --fail localhost:8888
 
-      - name: Extract Docker metadata
-        id: extract_meta_data
-        uses: docker/metadata-action@v5
-        with:
-          images: devtom028/go-httpenv
-          flavor: |
-            latest=false
-          tags: |
-            type=raw,value=04
-            type=raw,value=latest,enable=${{endsWith(github.ref,github.event.repository.default_branch)}}
-            type=ref,event=pr
-            type=ref,event=branch
-            type=semver,pattern={{version}}
+#       - name: Extract Docker metadata
+#         id: extract_meta_data
+#         uses: docker/metadata-action@v5
+#         with:
+#           images: devtom028/go-httpenv
+#           flavor: |
+#             latest=false
+#           tags: |
+#             type=raw,value=04
+#             type=raw,value=latest,enable=${{endsWith(github.ref,github.event.repository.default_branch)}}
+#             type=ref,event=pr
+#             type=ref,event=branch
+#             type=semver,pattern={{version}}
 
-      - name: Docker final build and push
-        uses: docker/build-push-action@v6
-        with:
-          push: ${{github.event_name != 'pull_request'}}
-          tags: ${{steps.extract_meta_data.outputs.tags}}
-          labels: ${{steps.extract_meta_data.outputs.labels}}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+#       - name: Docker final build and push
+#         uses: docker/build-push-action@v6
+#         with:
+#           push: ${{github.event_name != 'pull_request'}}
+#           tags: ${{steps.extract_meta_data.outputs.tags}}
+#           labels: ${{steps.extract_meta_data.outputs.labels}}
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+#           platforms: linux/amd64,linux/arm64,linux/arm/v7
 
-      - name: Find comment for image tags
-        uses: peter-evans/find-comment@v4
-        if: github.event_name == 'pull_request'
-        id: fc
-        with:
-          issue-number: ${{github.event.pull_request.number}}
-          comment-author: "github-actions[bot]"
-          body-includes: Docker image tag(s) pushed
+#       - name: Find comment for image tags
+#         uses: peter-evans/find-comment@v4
+#         if: github.event_name == 'pull_request'
+#         id: fc
+#         with:
+#           issue-number: ${{github.event.pull_request.number}}
+#           comment-author: "github-actions[bot]"
+#           body-includes: Docker image tag(s) pushed
 
-      - name: Create or update comment for image tags
-        uses: peter-evans/create-or-update-comment@v5
-        if: github.event_name == 'pull_request'
-        with:
-          comment-id: ${{steps.fc.outputs.comment-id}}
-          issue-number: ${{github.event.pull_request.number}}
-          body: |
-            Docker image tag(s) pushed:
-            ```text
-            ${{ steps.docker_meta.outputs.tags }}
-            ```
+#       - name: Create or update comment for image tags
+#         uses: peter-evans/create-or-update-comment@v5
+#         if: github.event_name == 'pull_request'
+#         with:
+#           comment-id: ${{steps.fc.outputs.comment-id}}
+#           issue-number: ${{github.event.pull_request.number}}
+#           body: |
+#             Docker image tag(s) pushed:
+#             ```text
+#             ${{ steps.docker_meta.outputs.tags }}
+#             ```
 
-            Labels added to images:
-            ```text
-            ${{ steps.docker_meta.outputs.labels }}
-            ```
-          edit-mode: replace
+#             Labels added to images:
+#             ```text
+#             ${{ steps.docker_meta.outputs.labels }}
+#             ```
+#           edit-mode: replace

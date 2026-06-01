@@ -1,0 +1,96 @@
+name: Parallelize jobs
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+      - ".github/linters/*"
+  pull_request:
+    paths-ignore:
+      - "README.md"
+      - ".github/linters/*"
+  schedule:
+    - cron: "0 12 15 * *"
+  workflow_dispatch:
+
+jobs:
+  # FIRST JOB ##########
+  build-test-image:
+    name: Build image for testing
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to ghcr.io registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push to GHCRR
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+  # NEXT JOB ###########
+  test-unit:
+    name: Unit tests in Docker
+    runs-on: ubuntu-latest
+    needs: [build-test-image]
+    permissions:
+      packages: read
+
+    steps:
+      - name: Login to ghcr.io registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Unit Testing in Docker
+        run: |
+          docker run --rm ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
+          echo "Unit test passed! ✅"
+
+  # NEXT JOB ############
+  test-integration:
+    name: Integration test in Docker compose
+    runs-on: ubuntu-latest
+    needs: [build-test-image]
+    permissions:
+      packages: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Login to ghcr.io registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Integration testing in Docker Compose
+        run: |
+          export TESTING_IMAGE=ghcr.io/${{github.actor}}/httpenv-ci-automation:${{github.run_id}}
+          docker compose -f docker-compose.test.yml up --exit-code-from sut
+          echo "Integration Test Passed! ✅"
