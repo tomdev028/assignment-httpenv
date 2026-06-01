@@ -69,7 +69,6 @@ jobs:
           load: true
           tags: ${{github.run_id}}-unit-test
           cache-from: type=gha
-          cache-to: type=gha,mode=max
           platforms: linux/amd64
 
       - name: Unit Testing in Docker
